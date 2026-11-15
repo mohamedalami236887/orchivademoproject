@@ -1,0 +1,46 @@
+﻿# Project-local dependencies and generated output
+**/node_modules/
+**/dist/
+**/target/
+**/.angular/
+**/coverage/
+**/out-tsc/
+**/.cache/
+**/tmp/
+
+# Local credentials, configuration, and runtime data
+**/.env
+**/.env.*
+!**/.env.example
+**/application-local.yml
+**/application-secrets.yml
+**/var/
+*.log
+*.log.*
+*.bak
+*.backup
+*.dump
+*.sql.gz
+*.pem
+*.key
+*.p12
+*.jks
+*.zip
+*.7z
+*.tar.gz
+
+# Local editor and agent tooling
+.agents/
+design-system/orchiva-2-0/
+# Retired Angular CLI starter icon; the app uses favicon.svg.
+frontend/public/favicon.ico
+**/.vscode/
+**/.idea/
+**/.history/
+*.iml
+*.swp
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+

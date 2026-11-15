@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: orchiva-backend
+  datasource:
+    url: ${ORCHIVA_DB_URL:jdbc:postgresql://localhost:5432/orchiva}
+    username: ${ORCHIVA_DB_USERNAME:orchiva_app}
+    password: ${ORCHIVA_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${ORCHIVA_DB_POOL_SIZE:10}
+      minimum-idle: ${ORCHIVA_DB_MIN_IDLE:2}
+      connection-timeout: 5000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: ${ORCHIVA_MAX_FILE_SIZE:20MB}
+      max-request-size: ${ORCHIVA_MAX_REQUEST_SIZE:25MB}
+  session:
+    timeout: ${ORCHIVA_SESSION_TIMEOUT:30m}
+
+server:
+  port: ${ORCHIVA_SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Orchiva
+    description: Enterprise workflow and document management platform
+    version: '@project.version@'
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.orchiva: ${ORCHIVA_LOG_LEVEL:INFO}
+
+orchiva:
+  document-storage: ${ORCHIVA_DOCUMENT_STORAGE:./var/documents}

@@ -1,0 +1,92 @@
+<div class="page-shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Orchiva home">
+      <span class="brand-mark" aria-hidden="true">O</span>
+      <span>Orchiva</span>
+    </a>
+    <span class="milestone">Foundation · Milestone 01</span>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">Enterprise workflow infrastructure</p>
+        <h1 id="hero-title">Decisions move forward.<br />Every step stays visible.</h1>
+        <p class="intro">
+          Orchiva brings internal requests, approvals, documents, and audit history into one
+          dependable workspace. The local application foundation is ready for business modules.
+        </p>
+        <div class="actions">
+          <a class="primary-action" href="/swagger-ui.html">Explore the API</a>
+          <a class="secondary-action" href="/actuator/health">Actuator health</a>
+        </div>
+      </div>
+
+      <aside class="status-card" aria-live="polite">
+        <div class="status-heading">
+          <span>Platform connection</span>
+          <span class="status-dot" [class.online]="connectionState() === 'online'"></span>
+        </div>
+
+        @if (connectionState() === 'checking') {
+          <div class="status-message">
+            <span class="spinner" aria-hidden="true"></span>
+            <strong>Checking local API…</strong>
+          </div>
+        } @else if (connectionState() === 'online' && health(); as platform) {
+          <div class="status-message">
+            <span class="check" aria-hidden="true">✓</span>
+            <div>
+              <strong>{{ platform.product }} API is online</strong>
+              <small>Version {{ platform.version }} · {{ platform.timestamp | date: 'medium' }}</small>
+            </div>
+          </div>
+        } @else {
+          <div class="status-message offline">
+            <span class="warning" aria-hidden="true">!</span>
+            <div>
+              <strong>Local API is not connected</strong>
+              <small>Start PostgreSQL and the Spring Boot backend, then check again.</small>
+            </div>
+          </div>
+          <button type="button" (click)="refreshHealth()">Check again</button>
+        }
+
+        <dl class="runtime-list">
+          <div><dt>Client</dt><dd>Angular 21</dd></div>
+          <div><dt>API</dt><dd>Spring Boot 4.1</dd></div>
+          <div><dt>Database</dt><dd>PostgreSQL 18</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="capabilities" aria-labelledby="capabilities-title">
+      <div class="section-heading">
+        <p class="eyebrow">Architecture baseline</p>
+        <h2 id="capabilities-title">Built for controlled, auditable work</h2>
+      </div>
+      <div class="capability-grid">
+        <article>
+          <span>01</span>
+          <h3>Modular by design</h3>
+          <p>Clear business boundaries inside one transactional Spring Boot application.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Database governed</h3>
+          <p>PostgreSQL persistence evolves through explicit, repeatable Flyway migrations.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Operationally visible</h3>
+          <p>Health endpoints, structured logs, and OpenAPI documentation from day one.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Orchiva · Local development environment</span>
+    <span>No cloud dependencies</span>
+  </footer>
+</div>

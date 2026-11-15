@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${ORCHIVA_TEST_DB_URL:jdbc:postgresql://localhost:5432/orchiva_test}
+    username: ${ORCHIVA_TEST_DB_USERNAME:orchiva_app}
+    password: ${ORCHIVA_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+orchiva:
+  document-storage: ${java.io.tmpdir}/orchiva-integration-documents

@@ -1,0 +1,10 @@
+﻿.draft-choice-overlay{padding:1rem}
+.draft-choice{width:min(31rem,100%);color:var(--ink);background:var(--surface)}
+.draft-choice h2{margin:.35rem 0 .6rem;color:var(--ink);font-size:1.45rem;letter-spacing:-.025em}
+.draft-choice p{color:var(--ink-2);line-height:1.55}
+.draft-choice .eyebrow{color:var(--brand-ink)}
+.draft-choice .draft-choice-detail{margin:.7rem 0 0;color:var(--muted);font-size:.86rem}
+.draft-choice .alert{color:var(--danger);background:var(--danger-soft)}
+.draft-choice .dialog-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.3rem}
+@media(max-width:480px){.draft-choice .dialog-actions{flex-direction:column-reverse}.draft-choice .dialog-actions .button{width:100%}}
+

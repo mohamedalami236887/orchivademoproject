@@ -1,0 +1,59 @@
+﻿import { Component, ElementRef, HostListener, ViewChild, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { forkJoin, of, finalize } from 'rxjs';
+import { ApiService } from '../../core/api.service';
+import { BusinessRequest, RequestType } from '../../core/api.models';
+import { UiService } from '../../shared/ui.service';
+
+@Component({selector:'app-request-form',imports:[ReactiveFormsModule,RouterLink],template:`
+<section class="page">
+  <header class="page-head"><div><p class="eyebrow">{{id?'Edit draft':'New internal request'}}</p><h1>{{id?'Update request':'Build a decision-ready request'}}</h1><p>Frame the outcome, business rationale and constraints before the request enters approval.</p></div><a class="button" routerLink="/requests">Cancel</a></header>
+  <div class="composer">
+    <aside class="brief-panel"><p class="eyebrow">Submission brief</p><h2>Help approvers decide once</h2><p>A strong request answers the questions that usually delay a decision.</p><ol><li><span>01</span><div><strong>Choose the right route</strong><small>The request type determines the published approval workflow.</small></div></li><li><span>02</span><div><strong>Name the outcome</strong><small>Use a title that is specific enough to scan in an approval queue.</small></div></li><li><span>03</span><div><strong>Supply decision context</strong><small>Include the need, timing, constraints, impact and supporting evidence.</small></div></li></ol><div class="draft-note"><strong>Saved as a draft</strong><span>After saving, choose whether to submit for approval or keep the draft for later.</span></div></aside>
+    <form class="panel request-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="form-heading"><div><span>Request record</span><h2>Core information</h2></div><span class="completion">{{completedFields()}} / 3 complete</span></div>
+      @if(attempted()&&form.invalid){<div class="alert" role="alert"><strong>Review the highlighted fields.</strong> The draft needs a request type, a clear title and sufficient business context.</div>}
+      <div class="form-grid">
+        <div class="field full"><label for="type">Request type <span>Required</span></label><select id="type" formControlName="requestTypeId" [attr.aria-invalid]="touched('requestTypeId')"><option value="">Choose a request type</option>@for(type of types();track type.id){<option [value]="type.id">{{type.name}}</option>}</select>@if(touched('requestTypeId')){<small class="field-error">Select a request type.</small>}@else{<small>The selected type controls the approval route.</small>}</div>
+        <div class="field full"><div class="label-row"><label for="title">Request title <span>Required</span></label><small>{{form.controls.title.value.length}} / 180</small></div><input id="title" formControlName="title" maxlength="180" placeholder="e.g. Approve FY27 supplier renewal" [attr.aria-invalid]="touched('title')">@if(touched('title')){<small class="field-error">Enter a title of at least 4 characters.</small>}@else{<small>State the decision or outcome, not the activity.</small>}</div>
+        <div class="field full"><div class="label-row"><label for="description">Business context and justification <span>Required</span></label><small>{{form.controls.description.value.length}} / 10,000</small></div><textarea id="description" formControlName="description" maxlength="10000" placeholder="What is needed? Why now? What is the business impact, timing and relevant constraint?" [attr.aria-invalid]="touched('description')"></textarea>@if(touched('description')){<small class="field-error">Provide at least 10 characters of context.</small>}@else{<small>Approvers will see this narrative beside the decision controls.</small>}</div>
+      </div>
+      @if(error()){<div class="alert" role="alert">{{error()}}</div>}
+      <footer class="form-actions"><span>Your draft remains editable until submission.</span><button class="button primary" type="submit" [disabled]="saving() || !!created()">{{saving()?'Savingâ€¦':'Save draft'}}</button></footer>
+    </form>
+  </div>
+</section>
+@if (created(); as draft) {
+  <div class="dialog-overlay draft-choice-overlay">
+    <section #draftChoice class="dialog draft-choice" role="dialog" aria-modal="true" aria-labelledby="draft-choice-title" aria-describedby="draft-choice-description" tabindex="-1">
+      <p class="eyebrow">Next step Â· {{draft.reference}}</p>
+      <h2 id="draft-choice-title">Request saved as draft</h2>
+      <p id="draft-choice-description">Your request was saved successfully, but it has not yet been sent for approval.</p>
+      <p class="draft-choice-detail">You can submit it now or return to this draft later from its request workspace.</p>
+      @if (submissionError()) { <div class="alert" role="alert" tabindex="-1" #submissionAlert>{{submissionError()}}</div> }
+      <div class="dialog-actions"><button class="button" type="button" (click)="keepDraft()" [disabled]="submitting() || leaving()">Keep as draft</button><button #submitAction class="button primary" type="button" (click)="submitForApproval()" [disabled]="submitting() || leaving()">{{submitting() ? 'Submittingâ€¦' : 'Submit for approval'}}</button></div>
+    </section>
+  </div>
+}`, 
+styleUrl:'./request-form-submission.scss',
+styles:[`
+.composer{display:grid;grid-template-columns:minmax(17rem,.58fr) minmax(0,1.42fr);gap:1rem;align-items:start}.brief-panel{position:sticky;top:5.5rem;padding:clamp(1.3rem,3vw,2rem);border-radius:var(--radius-xl);color:#d9ece8;background:linear-gradient(145deg,#0a2c35,#0e544f)}.brief-panel .eyebrow{color:#7ee0c0}.brief-panel h2{margin:.45rem 0 .6rem;color:#fff;font-size:1.45rem;letter-spacing:-.03em}.brief-panel>p:not(.eyebrow){margin:0;color:#a9c5c3}.brief-panel ol{display:grid;gap:1rem;margin:1.5rem 0;padding:0;list-style:none}.brief-panel li{display:grid;grid-template-columns:auto 1fr;gap:.75rem}.brief-panel li>span{display:grid;place-items:center;width:2.15rem;height:2.15rem;border:1px solid rgba(255,255,255,.2);border-radius:.65rem;color:#8ee3c7;font-size:.72rem;font-weight:850}.brief-panel strong,.brief-panel small{display:block}.brief-panel small{margin-top:.18rem;color:#9fbab8;line-height:1.45}.draft-note{display:grid;gap:.2rem;padding:1rem;border:1px solid rgba(255,255,255,.14);border-radius:var(--radius-md);background:rgba(255,255,255,.06)}.draft-note span{color:#aac4c1;font-size:.82rem}.request-form{overflow:hidden}.form-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.3rem 1.5rem;border-bottom:1px solid var(--line);background:var(--surface-2)}.form-heading span{color:var(--muted);font-size:.75rem;font-weight:750}.form-heading h2{margin:.15rem 0 0;font-size:1.2rem}.completion{padding:.35rem .6rem;border-radius:999px;color:var(--brand-ink)!important;background:var(--brand-soft)}.request-form>.alert{margin:1.25rem 1.5rem 0}.request-form>.form-grid{padding:1.5rem}.field{padding-bottom:1.2rem;border-bottom:1px solid var(--line)}.field:last-child{padding-bottom:0;border:0}.field label span{color:var(--brand);font-size:.7rem;text-transform:uppercase}.label-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}.label-row>small{color:var(--muted);font-variant-numeric:tabular-nums}.field>small{font-size:.78rem}.field textarea{min-height:15rem}.form-actions{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.5rem;border-top:1px solid var(--line);background:var(--surface-2)}.form-actions>span{color:var(--muted);font-size:.82rem}@media(max-width:900px){.composer{grid-template-columns:1fr}.brief-panel{position:static}.brief-panel ol{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:680px){.brief-panel ol{grid-template-columns:1fr}.form-heading,.form-actions{align-items:flex-start;flex-direction:column}.form-actions .button{width:100%}}`]
+})
+export class RequestFormComponent{
+ private readonly api=inject(ApiService);private readonly fb=inject(FormBuilder);private readonly route=inject(ActivatedRoute);private readonly router=inject(Router);private readonly ui=inject(UiService);readonly types=signal<RequestType[]>([]);readonly saving=signal(false);readonly attempted=signal(false);readonly error=signal('');readonly id=this.route.snapshot.paramMap.get('id');
+ @ViewChild('submitAction') submitAction?:ElementRef<HTMLButtonElement>;
+ @ViewChild('submissionAlert') submissionAlert?:ElementRef<HTMLElement>;
+ @ViewChild('draftChoice') draftChoice?:ElementRef<HTMLElement>;
+ readonly created=signal<BusinessRequest|null>(null);readonly submitting=signal(false);readonly leaving=signal(false);readonly submissionError=signal('');
+ readonly form=this.fb.nonNullable.group({requestTypeId:['',Validators.required],title:['',[Validators.required,Validators.minLength(4),Validators.maxLength(180)]],description:['',[Validators.required,Validators.minLength(10),Validators.maxLength(10000)]]});
+ constructor(){forkJoin({types:this.api.requestTypes(),request:this.id?this.api.request(this.id):of(null)}).subscribe({next:({types,request})=>{this.types.set(types);if(request)this.form.patchValue(request)},error:()=>this.error.set('The request form could not be prepared.')});}
+ touched(name:keyof typeof this.form.controls){const control=this.form.controls[name];return (control.touched||this.attempted())&&control.invalid;}
+ completedFields(){return Object.values(this.form.controls).filter(control=>control.valid).length;}
+ save(){if(this.saving()||this.created()||this.leaving())return;this.attempted.set(true);if(this.form.invalid){this.form.markAllAsTouched();return}this.saving.set(true);this.error.set('');const call=this.id?this.api.updateRequest(this.id,this.form.getRawValue()):this.api.createRequest(this.form.getRawValue());call.pipe(finalize(()=>this.saving.set(false))).subscribe({next:r=>{if(this.id){void this.router.navigate(['/requests',r.id]);return}this.created.set(r);setTimeout(()=>this.submitAction?.nativeElement.focus())},error:e=>this.error.set(e.error?.message??'The draft could not be saved.')});}
+ @HostListener('document:keydown.escape') onEscape(){if(this.created()&&!this.submitting()&&!this.leaving())this.keepDraft()}
+ @HostListener('document:keydown.tab',['$event']) keepChoiceFocus(event:Event){if(!this.created())return;const buttons=Array.from(this.draftChoice?.nativeElement.querySelectorAll<HTMLButtonElement>('.dialog-actions button:not([disabled])')??[]);if(!buttons.length){event.preventDefault();this.draftChoice?.nativeElement.focus();return}const first=buttons[0],last=buttons[buttons.length-1];if((event as KeyboardEvent).shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!(event as KeyboardEvent).shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}
+ keepDraft(){const draft=this.created();if(!draft||this.submitting()||this.leaving())return;this.leaving.set(true);this.ui.notify(`${draft.reference} remains a draft. You can submit it later from its request workspace.`);void this.router.navigate(['/requests',draft.id])}
+ submitForApproval(){const draft=this.created();if(!draft||this.submitting()||this.leaving())return;this.submitting.set(true);this.submissionError.set('');this.draftChoice?.nativeElement.focus();this.api.submitRequest(draft.id).pipe(finalize(()=>this.submitting.set(false))).subscribe({next:submitted=>{this.leaving.set(true);this.ui.notify(`${submitted.reference} submitted for approval. Its approval workflow has started.`);void this.router.navigate(['/requests',submitted.id])},error:e=>{this.submissionError.set(e.error?.message??'The request could not be submitted. Your draft is saved; review the issue and try again.');setTimeout(()=>this.submissionAlert?.nativeElement.focus())}})}
+}
+
